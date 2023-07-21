@@ -25,6 +25,7 @@ namespace IconBetAuth.Domino.Domain
         public virtual DbSet<Transaction> Transaction { get; set; }
         public virtual DbSet<Customer> Customer { get; set; }
         public virtual DbSet<Hall> Hall { get; set; }
+        public virtual DbSet<User> User { get; set; }
 
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -41,45 +42,27 @@ namespace IconBetAuth.Domino.Domain
             {
                 entity.ToTable("Transaction");
                 entity.HasKey(e => e.TransactionId);
-                entity.Property(e => e.Company).HasColumnType("Company");
-                entity.Property(e => e.UserName).HasColumnType("UserName");
-                entity.Property(e => e.TransactionsType).HasColumnType("TransactionsType");
-                entity.Property(e => e.Amount).HasColumnType("Amount");
-                entity.Property(e => e.TicketUUID).HasColumnType("TicketUUID");
-                entity.Property(e => e.ClientTransactionId).HasColumnType("ClientTransactionId");
+                entity.Property(e => e.UserName).HasColumnName("UserName");
+                entity.Property(e => e.TransactionsType).HasColumnName("TransactionsType");
+                entity.Property(e => e.Amount).HasColumnName("Amount");
+                entity.Property(e => e.TicketUUID).HasColumnName("TicketUUID");
+                entity.Property(e => e.UUID).HasColumnName("UUID");
                 entity.Property(e => e.CreationDate).HasColumnType("datetime");
             });
 
-            modelBuilder.Entity<Customer>(entity =>
+            modelBuilder.Entity<User>(entity =>
             {
-                entity.ToTable("Customer");
-
-                entity.HasKey(e => e.CustomerId);
-                entity.Property(e => e.APIUrl)
-                    .HasMaxLength(1000)
-                    .HasColumnName("APIUrl");
-
-                entity.Property(e => e.Name).HasMaxLength(50);
-
-                entity.Property(e => e.UrlError);
-                entity.Property(e => e.Password);
+                entity.ToTable("User");
+                entity.HasKey(e => e.UserId);
+                entity.Property(e => e.UserName).HasColumnName("UserName");
+                entity.Property(e => e.Password).HasColumnName("Password");
+                entity.Property(e => e.Active).HasColumnName("Active");
+                entity.Property(e => e.Rol).HasColumnName("Rol");
+                entity.Property(e => e.Balance).HasColumnName("Balance");
+                entity.Property(e => e.Currency).HasColumnName("Currency");
+                entity.Property(e => e.Country).HasColumnName("Country");
+                entity.Property(e => e.CreationDate).HasColumnType("datetime");
             });
-            modelBuilder.Entity<Hall>(entity =>
-                {
-                    entity.ToTable("Hall");
-
-                    entity.HasKey(e => e.HallId);
-                    entity.Property(e => e.Currency)
-                        .HasMaxLength(5)
-                        .HasColumnName("Currency");
-
-                    entity.Property(e => e.ParentHash)
-                        .HasColumnName("ParentHash");
-
-                    entity.Property(e => e.Hash)
-                        .HasColumnName("Hash");
-
-                });
             OnModelCreatingPartial(modelBuilder);
         }
 

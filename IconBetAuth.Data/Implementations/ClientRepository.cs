@@ -161,9 +161,17 @@ namespace IconBetAuth.Data.Implementations
             return await WriteBetTransaction(transactionDTO);
         }
 
-        public Task<UserDTO> Login(UserDTO userDTO)
+        public Task<UserDTO> Login(LoginDTO loginDTO)
         {
 
+        }
+
+        public Task<UserDTO> Register(RegisterDTO registerDTO)
+        {
+        }
+
+        public Task<bool> DeActivateUser(LoginDTO loginDTO)
+        { 
         }
     }
 }

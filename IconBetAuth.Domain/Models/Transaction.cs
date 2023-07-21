@@ -12,9 +12,6 @@ namespace IconBetAuth.Domain.Models
     {
         public int TransactionId { get; set; }
 
-        [JsonProperty("Company")]
-        public string Company { get; set; }
-
         [JsonProperty("UserName")]
         public string UserName { get; set; }
 
@@ -27,8 +24,8 @@ namespace IconBetAuth.Domain.Models
         [JsonProperty("TicketUUID")]
         public string TicketUUID { get; set; }
 
-        [JsonProperty("ClientTransactionId")]
-        public string ClientTransactionId { get; set; }
+        [JsonProperty("UUID")]
+        public string UUID { get; set; }
 
         [JsonProperty("CreationDate")]
         public DateTime CreationDate { get; set; }
