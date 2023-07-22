@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AutoMapper;
 using IconBetAuth.Domain;
+using IconBetAuth.Domain.DTO;
+using IconBetAuth.Domain.Enum;
+using IconBetAuth.Domain.ExtensionMethods;
 using IconBetAuth.Domain.Models;
 using IconBetAuth.Domino.Domain;
 
@@ -22,64 +25,147 @@ namespace IconBetAuth.Data.DB
             _iconBetAuthContext = new IconBetAuthContext(stringConnDB);
             _mapper = mapper;
         }
+        public TransactionResponseDTO SaveTransaction(Transaction transaction)
+        {
+            TransactionResponseDTO transactionResponseDTO = new TransactionResponseDTO();
+            ResponseDTO responseDTO = ValidateTransaction(transaction);
+            try
+            {
+                transactionResponseDTO.hasError = responseDTO.hasError;
+                transactionResponseDTO.Messages = responseDTO.Messages;
+                if (!responseDTO.hasError)
+                {
+                    transaction.CreationDate = DateTime.Now;
+                    _iconBetAuthContext.Add(transaction);
+                    int result = _iconBetAuthContext.SaveChanges();
+                    if (result == 1)
+                    {
+                        transactionResponseDTO.UUID = transaction.UUID;
+                    }
+                    else
+                    {
+                        transactionResponseDTO.hasError = true;
+                        transactionResponseDTO.Messages.Add(Error.GeneralError.GetDescription());
+                    }
 
-        public Customer GetCustomer(string name)
-        {
-            return _iconBetAuthContext.Customer.FirstOrDefault(x => x.Name == name);
+                }
+            }
+            catch (Exception ex)
+            {
+                transactionResponseDTO.hasError = true;
+                transactionResponseDTO.Messages.Add(Error.GeneralError.GetDescription());
+            }
+            return transactionResponseDTO;
         }
-        public Customer GetCustomer(int customerId)
+
+        public User? Login(LoginDTO loginDTO)
         {
-            return _iconBetAuthContext.Customer.FirstOrDefault(x => x.CustomerId == customerId);
+            return _iconBetAuthContext.User.FirstOrDefault(x => x.UserName == loginDTO.UserName && x.Password == loginDTO.Password && x.Active == true);
         }
-        public bool IsValidCustomer(int customerId)
+        public UserDTO Register(RegisterDTO registerDTO)
         {
-            return _iconBetAuthContext.Customer.Any(x => x.CustomerId == customerId && x.Active == true);
+            UserDTO userDTO = new UserDTO();
+            ResponseDTO response = ValidateUser(registerDTO);
+            try
+            {
+                userDTO.hasError = response.hasError;
+                userDTO.Messages = response.Messages;
+                if (!response.hasError)
+                {
+                    User user = _mapper.Map<User>(registerDTO);
+                    user.Active = true;
+                    user.CreationDate = DateTime.Now;
+                    _iconBetAuthContext.Add(user);
+                    int result = _iconBetAuthContext.SaveChanges();
+                    if (result == 1)
+                    {
+                        userDTO = _mapper.Map<UserDTO>(user);
+                    }
+                    else
+                    {
+                        userDTO.hasError = true;
+                        userDTO.Messages.Add(Error.GeneralError.GetDescription());
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                userDTO.hasError = true;
+                userDTO.Messages.Add(Error.GeneralError.GetDescription());
+            }
+            return userDTO;
         }
-        public bool SaveTransaction(Transaction transaction)
+        public bool DeActivateUser(LoginDTO loginDTO)
         {
             try
             {
-                _iconBetAuthContext.Add(transaction);
-                int result = _iconBetAuthContext.SaveChanges();
-                return result == 1;
-
+                User? user = Login(loginDTO);
+                if (user != null)
+                {
+                    user.Active = false;
+                    _iconBetAuthContext.User.Update(user);
+                    int result = _iconBetAuthContext.SaveChanges();
+                    return result == 1;
+                }
+                return false;
             }
             catch (Exception ex)
             {
                 return false;
             }
         }
-        public Hall GetHall(string parentHash, string currency)
-        {
-            var hall = _iconBetAuthContext.Hall.Where(x => x.ParentHash == parentHash && x.Currency == currency).FirstOrDefault();
-            return hall;
-        }
 
-        public List<Hall> GetHalls()
-        {
-            var halls = _iconBetAuthContext.Hall.ToList();
-            return halls;
-        }
-        public void SaveHall(Hall hallIncoming)
+        public bool UpdateUser(User user)
         {
             try
             {
-                var hall = _iconBetAuthContext.Hall.Single(a => a.HallId == hallIncoming.HallId);
-                if (hall != null)
-                {
-                    hall.AmountExChanged = hallIncoming.AmountExChanged;
-                    _iconBetAuthContext.Update(hall);
-                    _iconBetAuthContext.SaveChanges();
-                }
-                else
-                {
-                    _iconBetAuthContext.Add(hallIncoming);
-                    _iconBetAuthContext.SaveChanges();
-                }
+                _iconBetAuthContext.User.Update(user);
+                int result = _iconBetAuthContext.SaveChanges();
+                return result == 1;
             }
             catch (Exception ex)
             {
+                return false;
             }
+        }
+        public User? GetUser(string userName)
+        {
+            return _iconBetAuthContext.User.FirstOrDefault(x => x.UserName == userName);
+        }
+        private ResponseDTO ValidateUser(RegisterDTO registerDTO)
+        {
+            ResponseDTO responseDTO = new ResponseDTO();
+            var existsEmail = _iconBetAuthContext.User.Any(x => x.Email == registerDTO.Email);
+            if (existsEmail)
+            {
+                responseDTO.Messages.Add(Error.ExistsEmail.GetDescription());
+            }
+
+            var existsPhone = _iconBetAuthContext.User.Any(x => x.Phone == registerDTO.Phone);
+            if (existsPhone)
+            {
+                responseDTO.Messages.Add(Error.ExistsPhone.GetDescription());
+            }
+
+            var existsUsername = _iconBetAuthContext.User.Any(x => x.UserName == registerDTO.UserName);
+            if (existsUsername)
+            {
+                responseDTO.Messages.Add(Error.ExistsUserName.GetDescription());
+            }
+            responseDTO.hasError = responseDTO.Messages.Count > 0;
+            return responseDTO;
+        }
+        private ResponseDTO ValidateTransaction(Transaction transaction)
+        {
+            ResponseDTO responseDTO = new ResponseDTO();
+            var existsTicketUUID = _iconBetAuthContext.Transaction.Any(x => x.TicketUUID == transaction.TicketUUID);
+            if (existsTicketUUID)
+            {
+                responseDTO.Messages.Add(Error.TicketUUIDError.GetDescription());
+            }
+
+            responseDTO.hasError = responseDTO.Messages.Count > 0;
+            return responseDTO;
         }
     }
 }

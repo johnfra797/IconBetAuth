@@ -12,7 +12,7 @@ namespace IconBetAuth.Data.Definitions
     {
         Task<UserDTO> GetInfo(UserDTO userDTO);
         Task<BalanceDTO> GetBalance(UserDTO userDTO);
-        Task<string> WriteBet(TransactionDTO transactionDTO);
+        Task<TransactionResponseDTO> WriteBet(TransactionDTO transactionDTO);
         Task<UserDTO> Login(LoginDTO loginDTO);
         Task<UserDTO> Register(RegisterDTO registerDTO);
         Task<bool> DeActivateUser(LoginDTO loginDTO);

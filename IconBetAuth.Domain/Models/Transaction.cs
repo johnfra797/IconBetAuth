@@ -32,5 +32,11 @@ namespace IconBetAuth.Domain.Models
 
         [JsonProperty("Description")]
         public string Description { get; set; }
+
+        [JsonProperty("Company")]
+        public string Company { get; set; }
+
+        [JsonProperty("Currency")]
+        public string Currency { get; set; }
     }
 }

@@ -17,6 +17,8 @@ using IconBetAuth.Data.Implementations;
 using IconBetAuth.Services;
 using IconBetAuth.API.Mapping;
 using MediatR;
+using System.Reflection;
+using IconBetAuth.Services.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,11 +47,13 @@ IMapper mapper = mapperConfig.CreateMapper();
 builder.Services.AddSingleton(mapper);
 
 builder.Services.AddTransient<IClientRepository, ClientRepository>();
-builder.Services.AddMediatR(UserGetInfoServiceClient);
-builder.Services.AddMediatR(typeof(UserGetBalanceServiceClient).Assembly);
-builder.Services.AddMediatR(typeof(UserTransactionServiceClient).Assembly);
-builder.Services.AddMediatR(typeof(ClientRepository).Assembly);
-
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UserGetBalanceServiceClient).Assembly));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UserTransactionServiceClient).Assembly));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DeActivateServiceClient).Assembly));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(LoginServiceClient).Assembly));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RegisterServiceClient).Assembly));
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UserGetInfoServiceClient).Assembly));
 
 var app = builder.Build();
 app.UseCors(builder => builder.AllowAnyHeader().AllowAnyOrigin().AllowAnyMethod());

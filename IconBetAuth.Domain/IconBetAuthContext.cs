@@ -23,8 +23,6 @@ namespace IconBetAuth.Domino.Domain
         {
         }
         public virtual DbSet<Transaction> Transaction { get; set; }
-        public virtual DbSet<Customer> Customer { get; set; }
-        public virtual DbSet<Hall> Hall { get; set; }
         public virtual DbSet<User> User { get; set; }
 
 
@@ -47,6 +45,8 @@ namespace IconBetAuth.Domino.Domain
                 entity.Property(e => e.Amount).HasColumnName("Amount");
                 entity.Property(e => e.TicketUUID).HasColumnName("TicketUUID");
                 entity.Property(e => e.UUID).HasColumnName("UUID");
+                entity.Property(e => e.Company).HasColumnName("Company");
+                entity.Property(e => e.Currency).HasColumnName("Currency");
                 entity.Property(e => e.CreationDate).HasColumnType("datetime");
             });
 
@@ -61,6 +61,8 @@ namespace IconBetAuth.Domino.Domain
                 entity.Property(e => e.Balance).HasColumnName("Balance");
                 entity.Property(e => e.Currency).HasColumnName("Currency");
                 entity.Property(e => e.Country).HasColumnName("Country");
+                entity.Property(e => e.Phone).HasColumnName("Phone");
+                entity.Property(e => e.Email).HasColumnName("Email");
                 entity.Property(e => e.CreationDate).HasColumnType("datetime");
             });
             OnModelCreatingPartial(modelBuilder);

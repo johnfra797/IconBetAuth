@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace IconBetAuth.Services.Services
 {
-    public static class RegisterServiceClient
+    public static class DeActivateServiceClient
     {
-        public record Query(RegisterDTO registerDTO) : IRequest<UserDTO>;
+        public record Query(LoginDTO loginDTO) : IRequest<bool>;
 
-        public class Handler : IRequestHandler<Query, UserDTO>
+        public class Handler : IRequestHandler<Query, bool>
         {
             private readonly IClientRepository _clientRepository;
 
@@ -22,9 +22,9 @@ namespace IconBetAuth.Services.Services
                 this._clientRepository = clientRepository;
             }
 
-            public Task<UserDTO> Handle(Query request, CancellationToken cancellationToken)
+            public Task<bool> Handle(Query request, CancellationToken cancellationToken)
             {
-                return _clientRepository.Register(request.registerDTO);
+                return _clientRepository.DeActivateUser(request.loginDTO);
             }
         }
     }

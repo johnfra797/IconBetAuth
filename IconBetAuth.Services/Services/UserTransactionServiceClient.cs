@@ -12,9 +12,9 @@ namespace IconBetAuth.Services
 {
      public static class UserTransactionServiceClient
     {
-        public record Query(TransactionDTO transactionDTO) : IRequest<string>;
+        public record Query(TransactionDTO transactionDTO) : IRequest<TransactionResponseDTO>;
 
-        public class Handler : IRequestHandler<Query, string>
+        public class Handler : IRequestHandler<Query, TransactionResponseDTO>
         {
             private readonly IClientRepository _clientRepository;
 
@@ -23,7 +23,7 @@ namespace IconBetAuth.Services
                 this._clientRepository = clientRepository;
             }
 
-            public Task<string> Handle(Query request, CancellationToken cancellationToken)
+            public Task<TransactionResponseDTO> Handle(Query request, CancellationToken cancellationToken)
             {
                 return _clientRepository.WriteBet(request.transactionDTO);
             }

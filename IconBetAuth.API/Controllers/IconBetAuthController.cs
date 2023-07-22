@@ -57,5 +57,19 @@ namespace IconBetAuth.API.Controllers
             var userInfo = await _mediator.Send(new LoginServiceClient.Query(loginDTO));
             return Ok(userInfo);
         }
+        [HttpPost("Register/{client}")]
+        public async Task<IActionResult> RegisterUser([FromBody] RegisterDTO registerDTO, string client)
+        {
+            _logger.LogInformation($"Request RegisterUser {client} ");
+            var userInfo = await _mediator.Send(new RegisterServiceClient.Query(registerDTO));
+            return Ok(userInfo);
+        }
+        [HttpPost("DeActivate/{client}")]
+        public async Task<IActionResult> DeActivateUser([FromBody] LoginDTO loginDTO, string client)
+        {
+            _logger.LogInformation($"Request DeActivateUser {client} ");
+            var userInfo = await _mediator.Send(new DeActivateServiceClient.Query(loginDTO));
+            return Ok(userInfo);
+        }
     }
 }

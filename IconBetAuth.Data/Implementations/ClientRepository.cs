@@ -11,8 +11,11 @@ using AutoMapper;
 using IconBetAuth.Data.DB;
 using IconBetAuth.Data.Definitions;
 using IconBetAuth.Domain.DTO;
+using IconBetAuth.Domain.Enum;
+using IconBetAuth.Domain.ExtensionMethods;
 using IconBetAuth.Domain.Models;
 using Microsoft.Extensions.Configuration;
+using static Azure.Core.HttpHeader;
 
 namespace IconBetAuth.Data.Implementations
 {
@@ -29,149 +32,95 @@ namespace IconBetAuth.Data.Implementations
         {
             _configuration = configuration;
             _mapper = mapper;
-            string db = _configuration.GetSection("ConnectionStrings").GetSection("DB").Value;
-
-            UrlGetInfo = _configuration.GetSection("Client").GetSection("UrlGetInfo").Value;
-            Url = _configuration.GetSection("Client").GetSection("Url").Value;
-            Clave = _configuration.GetSection("Client").GetSection("Clave").Value;
-            ClaveCliente = _configuration.GetSection("Client").GetSection("ClaveCliente").Value;
-
-            _dataBase = new DataBase(db, mapper);
         }
-        public async Task<BalanceDTO> GetBalance(UserDTO userDTO, string apiUrl)
+        private void initDB(string db)
         {
-            BalanceDTO balanceDTO = new BalanceDTO();
-            try
-            {
-
-                var userDto = await GetInfoByUser(userDTO);
-                balanceDTO.UserName = userDto.UserName;
-                balanceDTO.Balance = userDto.Balance;
-                balanceDTO.Currency = userDto.Currency;
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-            return await Task.Run(() => balanceDTO);
+            _dataBase = new DataBase(db, _mapper);
         }
 
         public async Task<BalanceDTO> GetBalance(UserDTO userDTO)
         {
-            Customer customer = _dataBase.GetCustomer(userDTO.Company);
-            return await GetBalance(userDTO, customer.APIUrl);
+            initDB(userDTO.DatabaseConnectionString);
+            BalanceDTO balanceDTO = new BalanceDTO();
+            var userDto = await GetInfoByUser(userDTO);
+            balanceDTO.UserName = userDto.UserName;
+            balanceDTO.Balance = userDto.Balance.Value;
+            balanceDTO.Currency = userDto.Currency;
+            return balanceDTO;
         }
 
-        public async Task<UserDTO> GetInfoByUser(UserDTO user)
+        public async Task<UserDTO?> GetInfoByUser(UserDTO user)
         {
-            try
+            User? userResponse = _dataBase.GetUser(user.UserName);
+            if (userResponse != null)
             {
-                string resultado = string.Empty;
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create($"{UrlGetInfo}&account={user.UserName}");
-                request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                request.Accept = "application/json";
-                request.Method = WebRequestMethods.Http.Get;
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    resultado = reader.ReadToEnd();
-                }
-
-                XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(resultado);
-
-                XmlNodeList xnList = xmlDoc.SelectNodes("/Data");
-
-                UserDTO userDTO = new UserDTO();
-
-                foreach (XmlNode xn in xnList)
-                {
-                    //user.Company = xn["Compania"].InnerText;
-                    user.Agent = xn["Agente"].InnerText;
-                    user.Currency = xn["Moneda"].InnerText;
-                    user.BalanceStr = xn["BalanceDeCliente"].InnerText.Replace(",", ".");
-                    decimal balance;
-                    decimal.TryParse(xn["BalanceDeCliente"].InnerText.Replace(",", "."), out balance);
-                    user.Balance = balance;
-                }
-
-                return user;
+                return _mapper.Map<UserDTO>(userResponse);
             }
-            catch (Exception ex)
-            {
-                return new UserDTO();
-            }
+            return null;
+
         }
 
-        public async Task<UserDTO> GetInfo(UserDTO userDTO)
+        public async Task<UserDTO?> GetInfo(UserDTO userDTO)
         {
-            Customer customer = _dataBase.GetCustomer(userDTO.Company);
-            if (customer != null)
-            {
-                UserDTO userDTOResponse = await GetInfoByUser(userDTO);
-                return userDTOResponse;
-            }
-            else
-                return null;
+            initDB(userDTO.DatabaseConnectionString);
+            UserDTO? userDTOResponse = await GetInfoByUser(userDTO);
+            return userDTOResponse;
         }
 
-        public async Task<string> WriteBetTransaction(TransactionDTO transactionDTO)
+        public async Task<TransactionResponseDTO> WriteBetTransaction(TransactionDTO transactionDTO)
         {
-            string code = string.Empty;
-            try
+            transactionDTO.UUID = Guid.NewGuid().ToString();
+            Transaction Transaction = _mapper.Map<Transaction>(transactionDTO);
+            var result =_dataBase.SaveTransaction(Transaction);
+            if (!result.hasError)
             {
-                string amount = transactionDTO.Amount.ToString().Replace(".", ",");
-                int transactionsType = (int)transactionDTO.TransactionsType;
-                string resultado = string.Empty;
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create($"{Url}/RegistrarMontoDescrip?clave={Clave}&Clavecliente={ClaveCliente}&tipoTransaccion={transactionsType}&usuario={transactionDTO.UserName}&monto={amount}&descripcion={transactionDTO.Description}");
-                request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                request.Accept = "application/json";
-                request.Method = WebRequestMethods.Http.Get;
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
+                User user = _dataBase.GetUser(transactionDTO.UserName);
+                if (transactionDTO.TransactionsType == TransactionsType.Debit)
                 {
-                    resultado = reader.ReadToEnd();
+                    user.Balance = user.Balance - transactionDTO.Amount;
                 }
-
-                XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(resultado);
-                int codeResult;
-                int.TryParse(xmlDoc.InnerText, out codeResult);
-                if (codeResult > 0)
+                if (transactionDTO.TransactionsType == TransactionsType.Credit)
                 {
-                    code = xmlDoc.InnerText;
-
-                    Transaction Transaction = _mapper.Map<Transaction>(transactionDTO);
-                    _dataBase.SaveTransaction(Transaction);
+                    user.Balance = user.Balance + transactionDTO.Amount;
                 }
-
+                _dataBase.UpdateUser(user);
             }
-            catch (Exception ex)
-            {
-
-            }
-            return code;
+            return result;
         }
-        public async Task<string> WriteBet(TransactionDTO transactionDTO)
+        public async Task<TransactionResponseDTO> WriteBet(TransactionDTO transactionDTO)
         {
-            Customer customer = _dataBase.GetCustomer(transactionDTO.Company);
+            initDB(transactionDTO.DatabaseConnectionString);
             return await WriteBetTransaction(transactionDTO);
         }
 
-        public Task<UserDTO> Login(LoginDTO loginDTO)
+        public async Task<UserDTO?> Login(LoginDTO loginDTO)
         {
-
+            initDB(loginDTO.DatabaseConnectionString);
+            User? user = _dataBase.Login(loginDTO);
+            UserDTO userDTO = new UserDTO();
+            if (user != null)
+            {
+                userDTO = _mapper.Map<UserDTO>(user);
+            }
+            else
+            {
+                userDTO.hasError = true;
+                userDTO.Messages.Add(Error.LoginError.GetDescription());
+            }
+            return userDTO;
         }
 
-        public Task<UserDTO> Register(RegisterDTO registerDTO)
+        public async Task<UserDTO?> Register(RegisterDTO registerDTO)
         {
+            initDB(registerDTO.DatabaseConnectionString);
+            UserDTO userDTO = _dataBase.Register(registerDTO);
+            return userDTO;
         }
 
-        public Task<bool> DeActivateUser(LoginDTO loginDTO)
-        { 
+        public async Task<bool> DeActivateUser(LoginDTO loginDTO)
+        {
+            initDB(loginDTO.DatabaseConnectionString);
+            return _dataBase.DeActivateUser(loginDTO);
         }
     }
 }

@@ -12,8 +12,9 @@ namespace IconBetAuth.API.Mapping
     {
         public MappingProfile()
         {
-            CreateMap<Hall, HallDTO>();
+            CreateMap<User, UserDTO>();
             CreateMap<TransactionDTO, Transaction>();
+            CreateMap<RegisterDTO, User>();
         }
     }
     
